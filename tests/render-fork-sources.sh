@@ -158,7 +158,7 @@ if 'COPY --from=ncurses /ncurses/ /\n' not in less_stage:
     )
 
 merge_base = stage_body('FROM alpine-base AS full-image-merge-base\n')
-if 'COPY --from=ncurses /ncurses/ /skeleton/' not in merge_base:
+if 'COPY --from=ncurses-runtime / /skeleton/' not in merge_base:
     raise SystemExit(
         "full-image-merge-base no longer ships ncurses' libtinfo -- less "
         'would still build but fail to start at runtime (kairos-io/hadron#587)'

@@ -2104,6 +2104,13 @@ RUN mkdir -p /ncurses/usr/include /ncurses/usr/lib && \
             "/ncurses/usr/share/terminfo/${dir}/${term}"; \
     done
 
+## ncurses-runtime — the subset that ships in /skeleton: libtinfo and
+## the terminfo entries, but not the headers, which are only needed at
+## build time by the `less` stage (see COPY --from=ncurses / above).
+FROM scratch AS ncurses-runtime
+COPY --from=ncurses /ncurses/usr/lib/ /usr/lib/
+COPY --from=ncurses /ncurses/usr/share/terminfo/ /usr/share/terminfo/
+
 ## less — real upstream `less`, replacing the busybox applet.
 ## The busybox `less` mishandles systemd's pagination and color codes
 ## (see kairos-io/kairos#3815); shipping the real thing lets us drop
@@ -2117,7 +2124,8 @@ WORKDIR /sources
 RUN tar -xf less.tar.gz && mv less-* less
 WORKDIR /sources/less
 RUN ./configure ${COMMON_CONFIGURE_ARGS}
-RUN make -s -j${JOBS} -l${MAX_LOAD} && make -s -j${JOBS} -l${MAX_LOAD} install DESTDIR=/less
+RUN make -s -j${JOBS} -l${MAX_LOAD} && make -s -j${JOBS} -l${MAX_LOAD} install DESTDIR=/less && \
+    rm -rf /less/usr/share/man
 
 ## libmnl
 FROM rsync AS libmnl
@@ -3811,8 +3819,10 @@ COPY --from=tpm2-tss /tpm2-tss/ /skeleton/
 COPY --from=libcap /libcap/ /skeleton/
 
 ## Real `less`, replacing the busybox applet — see kairos-io/kairos#3815.
-## libtinfo and its terminfo entries come along because less links them.
-COPY --from=ncurses /ncurses/ /skeleton/
+## libtinfo and its terminfo entries come along because less links them;
+## the ncurses-runtime stage strips the /usr/include headers that only
+## exist on the ncurses builder for the less compile step.
+COPY --from=ncurses-runtime / /skeleton/
 COPY --from=less /less/ /skeleton/
 
 COPY --from=extra-tools /tools/ /skeleton/
