@@ -2776,6 +2776,7 @@ RUN ./configure ${COMMON_CONFIGURE_ARGS} \
 RUN make -s -j${JOBS} -l${MAX_LOAD}
 RUN make -s -j${JOBS} -l${MAX_LOAD} DESTDIR=/audit install
 RUN mkdir -p /audit/etc/audit/rules.d
+RUN install -d -m 0700 /audit/var/log/audit
 ## Drop upstream example rule templates
 RUN rm -rf /audit/usr/share/audit-rules /audit/usr/share/aclocal
 
