@@ -386,6 +386,18 @@ var _ = Describe("hadron container image structure", Label("image-structure"), f
 	Describe("audit userspace", Label("audit"), func() {
 		BeforeEach(skipUnlessFullImage)
 
+		// The crash-signal table below cannot detect a missing binary: a
+		// container run against a non-existent --entrypoint exits 127, and
+		// 127 is not a crash signal, so the spec would pass silently.
+		// Pin their presence explicitly first, same shape as
+		// `ships utilities third-party scripts expect` above.
+		It("ships audit binaries", func() {
+			for _, bin := range []string{"auditd", "auditctl", "ausearch", "aureport", "augenrules", "autrace", "audisp-syslog"} {
+				out, code := shInImage("command -v " + bin)
+				Expect(code).To(Equal(0), "%s missing from image: %s", bin, out)
+			}
+		})
+
 		DescribeTable("audit binaries run without crashing",
 			func(bin string, args ...string) {
 				out, code, err := runInImage(bin, args...)
@@ -401,9 +413,11 @@ var _ = Describe("hadron container image structure", Label("image-structure"), f
 			Entry("aureport", "aureport", "--version"),
 			Entry("augenrules", "augenrules", "--version"),
 			Entry("autrace", "autrace", "--version"),
-			// audisp-syslog is the plugin that needed the <unistd.h> patch
-			// (upstream PR linux-audit/audit-userspace#551). If the patch
-			// ever falls out, the binary will not build and this spec fails.
+			// audisp-syslog needs the <unistd.h> patch
+			// (upstream PR linux-audit/audit-userspace#551) to compile at
+			// all. If the patch ever falls out, the Docker build itself
+			// fails, not this spec — the presence check above catches the
+			// binary going missing for any other reason.
 			Entry("audisp-syslog", "audisp-syslog", "--help"),
 		)
 

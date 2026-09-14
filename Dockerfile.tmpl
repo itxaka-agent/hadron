@@ -2739,6 +2739,7 @@ RUN rm -f \
 
 FROM rsync AS audit
 ARG JOBS
+ARG MAX_LOAD
 COPY --from=autoconf /autoconf/ /
 COPY --from=automake /automake/ /
 COPY --from=libtool /libtool/ /
@@ -2770,11 +2771,14 @@ RUN ./configure ${COMMON_CONFIGURE_ARGS} \
     --without-libcap-ng \
     --without-io_uring \
     --without-apparmor \
+    ## Foreign-arch syscall tables compiled in on purpose so ausearch and
+    ## auditctl on one arch can read rules and logs collected on another.
+    ## Hadron builds no 32-bit ARM (REQUIRED_PLATFORMS: amd64/arm64/riscv64),
+    ## so --with-arm is omitted.
     --with-aarch64 \
-    --with-arm \
     --with-riscv
-RUN make -s -j${JOBS} -l${MAX_LOAD}
-RUN make -s -j${JOBS} -l${MAX_LOAD} DESTDIR=/audit install
+RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}}
+RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} DESTDIR=/audit install
 RUN mkdir -p /audit/etc/audit/rules.d
 RUN install -d -m 0700 /audit/var/log/audit
 ## Drop upstream example rule templates
