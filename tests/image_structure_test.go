@@ -377,4 +377,87 @@ var _ = Describe("hadron container image structure", Label("image-structure"), f
 		Expect(out).To(MatchRegexp(`(?m)^LOG_OK_LOGINS\s+yes\b`), "LOG_OK_LOGINS should be yes")
 		Expect(out).To(MatchRegexp(`(?m)^UMASK\s+077\b`), "UMASK should be 077")
 	})
+
+	// audit-userspace ships in the full image so kairos-init can drop the
+	// CIS Section 4 baseline rules; see kairos-io/kairos#4637. The stage
+	// builds with `--disable-legacy-actions --without-libcap-ng
+	// --without-io_uring --without-apparmor --without-golang
+	// --without-python3` and installs to /sbin + /etc + /usr/lib.
+	Describe("audit userspace", Label("audit"), func() {
+		BeforeEach(skipUnlessFullImage)
+
+		DescribeTable("audit binaries run without crashing",
+			func(bin string, args ...string) {
+				out, code, err := runInImage(bin, args...)
+				Expect(err).ToNot(HaveOccurred(),
+					"failed to invoke %q: %s", runtime, out)
+				if sig, crashed := crashSignalExitCodes[code]; crashed {
+					Fail(fmt.Sprintf("%s crashed with %s (exit code %d):\n%s",
+						bin, sig, code, out))
+				}
+			},
+			Entry("auditctl", "auditctl", "-v"),
+			Entry("ausearch", "ausearch", "--version"),
+			Entry("aureport", "aureport", "--version"),
+			Entry("augenrules", "augenrules", "--version"),
+			Entry("autrace", "autrace", "--version"),
+			// audisp-syslog is the plugin that needed the <unistd.h> patch
+			// (upstream PR linux-audit/audit-userspace#551). If the patch
+			// ever falls out, the binary will not build and this spec fails.
+			Entry("audisp-syslog", "audisp-syslog", "--help"),
+		)
+
+		It("ships the auditd daemon", func() {
+			// auditd exits non-zero without root/netlink but the binary must
+			// be present. -h prints usage and exits cleanly.
+			out, code := shInImage("test -x /sbin/auditd && echo OK")
+			Expect(code).To(Equal(0), "/sbin/auditd missing: %s", out)
+			Expect(out).To(ContainSubstring("OK"))
+		})
+
+		It("ships /etc/audit/auditd.conf", func() {
+			out, code := shInImage("cat /etc/audit/auditd.conf")
+			Expect(code).To(Equal(0), out)
+			Expect(out).To(ContainSubstring("log_file"),
+				"auditd.conf missing expected log_file directive")
+		})
+
+		It("ships /etc/audit/rules.d as a real directory", func() {
+			// kairos-init drops the CIS baseline .rules files here.
+			out, code := shInImage(
+				"test -d /etc/audit/rules.d && ! test -L /etc/audit/rules.d && echo OK")
+			Expect(code).To(Equal(0),
+				"/etc/audit/rules.d must be a real directory, got: %s", out)
+			Expect(out).To(ContainSubstring("OK"))
+		})
+
+		It("ships the auditd systemd unit", func() {
+			out, code := shInImage(
+				"cat /usr/lib/systemd/system/auditd.service")
+			Expect(code).To(Equal(0),
+				"auditd.service missing: %s", out)
+			Expect(out).To(ContainSubstring("ExecStart="),
+				"auditd.service missing ExecStart line")
+		})
+
+		It("ships libaudit and libauparse shared libraries", func() {
+			out, code := shInImage(
+				"ls /usr/lib/libaudit.so.* /usr/lib/libauparse.so.* 2>&1")
+			Expect(code).To(Equal(0),
+				"audit shared libraries missing: %s", out)
+			Expect(out).To(ContainSubstring("libaudit.so."))
+			Expect(out).To(ContainSubstring("libauparse.so."))
+		})
+
+		It("does NOT ship dropped upstream artifacts", func() {
+			// The audit stage removes rule templates and aclocal macros to
+			// keep the image small (see Dockerfile audit stage). Guard the
+			// deletion so a bump does not accidentally reintroduce them.
+			out, code := shInImage(
+				"! test -e /usr/share/audit-rules && ! test -e /usr/share/aclocal && echo OK")
+			Expect(code).To(Equal(0),
+				"dropped upstream artifacts reappeared: %s", out)
+			Expect(out).To(ContainSubstring("OK"))
+		})
+	})
 })
