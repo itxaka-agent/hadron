@@ -289,8 +289,7 @@ jobs:
             type=registry,ref=quay.io/kairos/hadron-build-cache:stage1-merge-amd64,mode=max
             type=registry,ref=quay.io/kairos/hadron-build-cache:rsync-amd64,mode=max
             type=registry,ref=quay.io/kairos/hadron-build-cache:kernel-misc-${{ matrix.kernel }}-amd64,mode=max
-            type=registry,ref=quay.io/kairos/hadron-build-cache:kernel-misc-amd64,mode=max
-          cache-to: ${{ github.ref_name == 'main' && format('type=registry,ref=quay.io/kairos/hadron-build-cache:kernel-misc-${{ matrix.kernel }}-amd64,{0}', env.CACHE_TO) || '' }}
+          cache-to: ${{ github.ref_name == 'main' && format('type=registry,ref=quay.io/kairos/hadron-build-cache:kernel-misc-{1}-amd64,{0}', env.CACHE_TO, matrix.kernel) || '' }}
           build-args: |
             KERNEL_TYPE=${{ matrix.kernel }}
 
@@ -668,8 +667,7 @@ jobs:
             type=registry,ref=quay.io/kairos/hadron-build-cache:stage1-merge-arm64,mode=max
             type=registry,ref=quay.io/kairos/hadron-build-cache:rsync-arm64,mode=max
             type=registry,ref=quay.io/kairos/hadron-build-cache:kernel-misc-${{ matrix.kernel }}-arm64,mode=max
-            type=registry,ref=quay.io/kairos/hadron-build-cache:kernel-misc-arm64,mode=max
-          cache-to: ${{ github.ref_name == 'main' && format('type=registry,ref=quay.io/kairos/hadron-build-cache:kernel-misc-${{ matrix.kernel }}-arm64,{0}', env.CACHE_TO) || '' }}
+          cache-to: ${{ github.ref_name == 'main' && format('type=registry,ref=quay.io/kairos/hadron-build-cache:kernel-misc-{1}-arm64,{0}', env.CACHE_TO, matrix.kernel) || '' }}
           build-args: |
             KERNEL_TYPE=${{ matrix.kernel }}
             ARCH=aarch64
