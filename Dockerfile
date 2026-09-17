@@ -104,6 +104,13 @@ ARG LIBTOOL_VERSION=2.5.4
 ARG LIBUCONTEXT_VERSION=1.5.2
 ARG LIBXML2_VERSION=2.15.3
 ARG KERNEL_VERSION=7.1.8
+# Version of the linux tarball used to install UAPI headers into
+# `kernel-headers-stage0`. Defaults to ${KERNEL_VERSION} so behaviour is
+# unchanged unless overridden. Operators can pin this to an older kernel
+# whose UAPI is byte-identical to a newer one to keep every late-bind
+# header consumer cache-warm across binary-kernel bumps that don't touch
+# linux/*.h. Refs kairos-io/kairos#4711.
+ARG KERNEL_HEADERS_VERSION=${KERNEL_VERSION}
 ARG LVM2_VERSION=2.03.42
 ARG LZ4_VERSION=1.10.0
 ARG M4_VERSION=1.4.21
@@ -275,6 +282,9 @@ FROM ${SOURCES_REPO}/libnetfilter_queue:${LIBNETFILTER_QUEUE_VERSION} AS libnetf
 FROM ${SOURCES_REPO}/conntrack-tools:${CONNTRACK_TOOLS_VERSION} AS conntrack-tools-download
 FROM ${SOURCES_REPO}/procps-ng:${PROCPS_NG_VERSION} AS procps-ng-download
 FROM ${SOURCES_REPO}/linux:${KERNEL_VERSION} AS linux-download
+# Independent source for the UAPI headers installed by kernel-headers-stage0.
+# Defaults to ${KERNEL_VERSION}; see the KERNEL_HEADERS_VERSION ARG above.
+FROM ${SOURCES_REPO}/linux:${KERNEL_HEADERS_VERSION} AS linux-headers-download
 FROM ${SOURCES_REPO}/flex:${FLEX_VERSION} AS flex-download
 FROM ${SOURCES_REPO}/bison:${BISON_VERSION} AS bison-download
 FROM ${SOURCES_REPO}/autoconf:${AUTOCONF_VERSION} AS autoconf-download
@@ -734,7 +744,12 @@ FROM make-stage0 AS kernel-headers-stage0
 ARG JOBS
 ARG MAX_LOAD
 
-COPY --from=sources-downloader /sources/downloads/linux.tar.xz /sources/
+# Pull the tarball straight from linux-headers-download (pinned to
+# ${KERNEL_HEADERS_VERSION}) rather than from sources-downloader so this
+# stage can be pinned to a different linux version than the one used to
+# build the kernel binary. kernel-base and the real kernel build stay
+# sourced from linux-download at ${KERNEL_VERSION}.
+COPY --from=linux-headers-download /sources/downloads/linux.tar.xz /sources/
 
 WORKDIR /sources
 RUN tar -xf linux.tar.xz && mv linux-* kernel
