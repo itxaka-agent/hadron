@@ -779,8 +779,12 @@ RUN rsync -aHAX --keep-dirlinks /make/. /skeleton/
 COPY --from=binutils-stage0 /sysroot /binutils
 RUN rsync -aHAX --keep-dirlinks /binutils/. /skeleton/
 
-COPY --from=kernel-headers-stage0 /linux-headers /linux-headers
-RUN rsync -aHAX --keep-dirlinks  /linux-headers/. /skeleton/usr/
+# NOTE: kernel headers used to be baked into /skeleton/usr here so every
+# stage1-derived build image had them for free. That coupling meant every
+# kernel bump invalidated the cache of ~30 build stages that never touch a
+# <linux/*> header. They are now late-bound per consumer with an explicit
+# `COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/`
+# in the packages that actually need them. Refs kairos/#4711.
 
 # Provide ldconfig in the image
 COPY --from=sources-downloader /sources/downloads/aports.tar.gz /aports/aports.tar.gz
