@@ -779,9 +779,6 @@ RUN rsync -aHAX --keep-dirlinks /make/. /skeleton/
 COPY --from=binutils-stage0 /sysroot /binutils
 RUN rsync -aHAX --keep-dirlinks /binutils/. /skeleton/
 
-COPY --from=kernel-headers-stage0 /linux-headers /linux-headers
-RUN rsync -aHAX --keep-dirlinks  /linux-headers/. /skeleton/usr/
-
 # Provide ldconfig in the image
 COPY --from=sources-downloader /sources/downloads/aports.tar.gz /aports/aports.tar.gz
 WORKDIR /aports
@@ -789,7 +786,12 @@ RUN tar xf aports.tar.gz && mv aports-* aports
 RUN cp aports/main/musl/ldconfig /skeleton/usr/bin/ldconfig && chmod +x /skeleton/usr/bin/ldconfig
 ## END of HACK
 
-FROM scratch AS stage1
+# stage1-core: the kernel-agnostic build environment. Everything a package
+# needs to compile that does NOT touch <linux/*> headers can start from here.
+# Kept free of kernel-headers so bumping the kernel does not invalidate its
+# cache (and therefore the cache of every downstream package built on top of
+# it). See kairos-io/kairos#4711.
+FROM scratch AS stage1-core
 
 ARG VENDOR="hadron"
 ENV VENDOR=${VENDOR}
@@ -814,6 +816,15 @@ ENV LDFLAGS="-Wl,--gc-sections -Wl,--as-needed -flto=auto"
 # TODO: we should set -march=x86-64-v2 to avoid compiling for old CPUs. Save space and its faster.
 
 COPY --from=stage1-merge /skeleton /
+
+# stage1: stage1-core plus linux-headers. Packages that need <linux/*>
+# (systemd, util-linux, cryptsetup, kmod, lvm2, ...) start FROM stage1.
+# Because linux-headers land in this overlay only, a kernel bump invalidates
+# the cache of this stage and its dependents, but stage1-core (and every
+# package built FROM stage1-core) stays cached. Behavior is identical to the
+# previous single-stage stage1 for anything that stays on FROM stage1.
+FROM stage1-core AS stage1
+COPY --from=kernel-headers-stage0 /linux-headers/ /usr/
 
 
 # This environment now should be vanilla, ready to build the rest of the system
