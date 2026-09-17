@@ -3735,82 +3735,134 @@ COPY --link --from=lz4 /lz4 /
 COPY --link --from=xxhash /xxhash /
 
 # Base skeleton
-COPY --from=skeleton /sysroot /merge
+RUN --mount=type=bind,from=skeleton,source=/sysroot,target=/tmp/skeleton \
+    mkdir -p /merge && rsync -aHAX --keep-dirlinks /tmp/skeleton/. /merge
 
 # Now prepare a merged directory with all the built tools
-COPY --from=busybox /sysroot /busybox
-RUN rsync -aHAX --keep-dirlinks  /busybox/. /merge
-COPY --from=cmake /cmake/ /merge/
-COPY --from=kmod /kmod/ /merge/
-COPY --from=xz /xz/ /merge/
-COPY --from=util-linux /util-linux /util-linux
-RUN rsync -aHAX --keep-dirlinks  /util-linux/. /merge
-COPY --from=systemd /systemd/ /merge/
-COPY --from=perl /perl/ /merge/
-COPY --from=libcap /libcap /libcap
-RUN rsync -aHAX --keep-dirlinks  /libcap/. /merge
-COPY --from=pam-systemd /pam/ /merge/
-COPY --from=pkgconfig /pkgconfig/ /merge/
-COPY --from=readline /readline/ /merge/
-COPY --from=bash /bash /bash
-RUN rsync -aHAX --keep-dirlinks  /bash/. /merge
-COPY --from=pax-utils /pax-utils/ /merge/
-COPY --from=readline /readline/ /merge/
-COPY --from=openssl /openssl/ /merge/
-COPY --from=bison /bison/ /merge/
-COPY --from=flex /flex/ /merge/
-COPY --from=m4 /m4/ /merge/
-COPY --from=lvm2-systemd /lvm2/ /merge/
-COPY --from=gawk /gawk/ /merge/
-COPY --from=jsonc /jsonc/ /merge/
-COPY --from=libaio /libaio/ /merge/
-COPY --from=coreutils /coreutils /coreutils
-RUN rsync -aHAX --keep-dirlinks  /coreutils/. /merge
-COPY --from=expat /expat/ /merge/
-COPY --from=zlib /zlib/ /merge/
-COPY --from=zstd /zstd/ /merge/
-COPY --from=fts /fts/ /merge/
-COPY --from=autoconf /autoconf/ /merge/
-COPY --from=automake /automake/ /merge/
-COPY --from=pkgconfig /pkgconfig/ /merge/
-COPY --from=libseccomp /libseccomp/ /merge/
-COPY --from=dbus /dbus/ /merge/
-COPY --from=python-build /python/ /merge/
-COPY --from=acl /acl/ /merge/
-COPY --from=ca-certificates /ca-certificates/ /merge/
-COPY --from=curl /curl/ /merge/
-COPY --from=rsync /rsync/ /merge/
-COPY --from=gcc-stage0 /sysroot /gcc
-RUN rsync -aHAX --keep-dirlinks /gcc/. /merge
-COPY --from=musl-stage0 /sysroot /musl
-RUN rsync -aHAX --keep-dirlinks /musl/. /merge
-COPY --from=make-stage0 /sysroot /make
-RUN rsync -aHAX --keep-dirlinks /make/. /merge
-COPY --from=binutils-stage0 /sysroot /binutils
-RUN rsync -aHAX --keep-dirlinks /binutils/. /merge
-COPY --from=attr /attr/ /merge/
-COPY --from=busybox /sysroot /busybox
-RUN rsync -aHAX --keep-dirlinks  /busybox/. /merge
-COPY --from=libffi /libffi/ /merge/
-COPY --from=lz4 /lz4/ /merge/
-COPY --from=xxhash /xxhash/ /merge/
-COPY --from=libxml /libxml/ /merge/
-COPY --from=grep /grep/ /merge/
-COPY --from=diffutils /diffutils/ /merge/
+RUN --mount=type=bind,from=busybox,source=/sysroot,target=/tmp/busybox \
+    rsync -aHAX --keep-dirlinks /tmp/busybox/. /merge
+RUN --mount=type=bind,from=cmake,source=/cmake,target=/tmp/cmake \
+    rsync -aHAX --keep-dirlinks /tmp/cmake/. /merge/
+RUN --mount=type=bind,from=kmod,source=/kmod,target=/tmp/kmod \
+    rsync -aHAX --keep-dirlinks /tmp/kmod/. /merge/
+RUN --mount=type=bind,from=xz,source=/xz,target=/tmp/xz \
+    rsync -aHAX --keep-dirlinks /tmp/xz/. /merge/
+RUN --mount=type=bind,from=util-linux,source=/util-linux,target=/tmp/util-linux \
+    rsync -aHAX --keep-dirlinks /tmp/util-linux/. /merge
+RUN --mount=type=bind,from=systemd,source=/systemd,target=/tmp/systemd \
+    rsync -aHAX --keep-dirlinks /tmp/systemd/. /merge/
+RUN --mount=type=bind,from=perl,source=/perl,target=/tmp/perl \
+    rsync -aHAX --keep-dirlinks /tmp/perl/. /merge/
+RUN --mount=type=bind,from=libcap,source=/libcap,target=/tmp/libcap \
+    rsync -aHAX --keep-dirlinks /tmp/libcap/. /merge
+RUN --mount=type=bind,from=pam-systemd,source=/pam,target=/tmp/pam \
+    rsync -aHAX --keep-dirlinks /tmp/pam/. /merge/
+RUN --mount=type=bind,from=pkgconfig,source=/pkgconfig,target=/tmp/pkgconfig \
+    rsync -aHAX --keep-dirlinks /tmp/pkgconfig/. /merge/
+RUN --mount=type=bind,from=readline,source=/readline,target=/tmp/readline \
+    rsync -aHAX --keep-dirlinks /tmp/readline/. /merge/
+RUN --mount=type=bind,from=bash,source=/bash,target=/tmp/bash \
+    rsync -aHAX --keep-dirlinks /tmp/bash/. /merge
+RUN --mount=type=bind,from=pax-utils,source=/pax-utils,target=/tmp/pax-utils \
+    rsync -aHAX --keep-dirlinks /tmp/pax-utils/. /merge/
+RUN --mount=type=bind,from=readline,source=/readline,target=/tmp/readline \
+    rsync -aHAX --keep-dirlinks /tmp/readline/. /merge/
+RUN --mount=type=bind,from=openssl,source=/openssl,target=/tmp/openssl \
+    rsync -aHAX --keep-dirlinks /tmp/openssl/. /merge/
+RUN --mount=type=bind,from=bison,source=/bison,target=/tmp/bison \
+    rsync -aHAX --keep-dirlinks /tmp/bison/. /merge/
+RUN --mount=type=bind,from=flex,source=/flex,target=/tmp/flex \
+    rsync -aHAX --keep-dirlinks /tmp/flex/. /merge/
+RUN --mount=type=bind,from=m4,source=/m4,target=/tmp/m4 \
+    rsync -aHAX --keep-dirlinks /tmp/m4/. /merge/
+RUN --mount=type=bind,from=lvm2-systemd,source=/lvm2,target=/tmp/lvm2 \
+    rsync -aHAX --keep-dirlinks /tmp/lvm2/. /merge/
+RUN --mount=type=bind,from=gawk,source=/gawk,target=/tmp/gawk \
+    rsync -aHAX --keep-dirlinks /tmp/gawk/. /merge/
+RUN --mount=type=bind,from=jsonc,source=/jsonc,target=/tmp/jsonc \
+    rsync -aHAX --keep-dirlinks /tmp/jsonc/. /merge/
+RUN --mount=type=bind,from=libaio,source=/libaio,target=/tmp/libaio \
+    rsync -aHAX --keep-dirlinks /tmp/libaio/. /merge/
+RUN --mount=type=bind,from=coreutils,source=/coreutils,target=/tmp/coreutils \
+    rsync -aHAX --keep-dirlinks /tmp/coreutils/. /merge
+RUN --mount=type=bind,from=expat,source=/expat,target=/tmp/expat \
+    rsync -aHAX --keep-dirlinks /tmp/expat/. /merge/
+RUN --mount=type=bind,from=zlib,source=/zlib,target=/tmp/zlib \
+    rsync -aHAX --keep-dirlinks /tmp/zlib/. /merge/
+RUN --mount=type=bind,from=zstd,source=/zstd,target=/tmp/zstd \
+    rsync -aHAX --keep-dirlinks /tmp/zstd/. /merge/
+RUN --mount=type=bind,from=fts,source=/fts,target=/tmp/fts \
+    rsync -aHAX --keep-dirlinks /tmp/fts/. /merge/
+RUN --mount=type=bind,from=autoconf,source=/autoconf,target=/tmp/autoconf \
+    rsync -aHAX --keep-dirlinks /tmp/autoconf/. /merge/
+RUN --mount=type=bind,from=automake,source=/automake,target=/tmp/automake \
+    rsync -aHAX --keep-dirlinks /tmp/automake/. /merge/
+RUN --mount=type=bind,from=pkgconfig,source=/pkgconfig,target=/tmp/pkgconfig \
+    rsync -aHAX --keep-dirlinks /tmp/pkgconfig/. /merge/
+RUN --mount=type=bind,from=libseccomp,source=/libseccomp,target=/tmp/libseccomp \
+    rsync -aHAX --keep-dirlinks /tmp/libseccomp/. /merge/
+RUN --mount=type=bind,from=dbus,source=/dbus,target=/tmp/dbus \
+    rsync -aHAX --keep-dirlinks /tmp/dbus/. /merge/
+RUN --mount=type=bind,from=python-build,source=/python,target=/tmp/python \
+    rsync -aHAX --keep-dirlinks /tmp/python/. /merge/
+RUN --mount=type=bind,from=acl,source=/acl,target=/tmp/acl \
+    rsync -aHAX --keep-dirlinks /tmp/acl/. /merge/
+RUN --mount=type=bind,from=ca-certificates,source=/ca-certificates,target=/tmp/ca-certificates \
+    rsync -aHAX --keep-dirlinks /tmp/ca-certificates/. /merge/
+RUN --mount=type=bind,from=curl,source=/curl,target=/tmp/curl \
+    rsync -aHAX --keep-dirlinks /tmp/curl/. /merge/
+RUN --mount=type=bind,from=rsync,source=/rsync,target=/tmp/rsync \
+    rsync -aHAX --keep-dirlinks /tmp/rsync/. /merge/
+RUN --mount=type=bind,from=gcc-stage0,source=/sysroot,target=/tmp/gcc \
+    rsync -aHAX --keep-dirlinks /tmp/gcc/. /merge
+RUN --mount=type=bind,from=musl-stage0,source=/sysroot,target=/tmp/musl \
+    rsync -aHAX --keep-dirlinks /tmp/musl/. /merge
+RUN --mount=type=bind,from=make-stage0,source=/sysroot,target=/tmp/make \
+    rsync -aHAX --keep-dirlinks /tmp/make/. /merge
+RUN --mount=type=bind,from=binutils-stage0,source=/sysroot,target=/tmp/binutils \
+    rsync -aHAX --keep-dirlinks /tmp/binutils/. /merge
+RUN --mount=type=bind,from=attr,source=/attr,target=/tmp/attr \
+    rsync -aHAX --keep-dirlinks /tmp/attr/. /merge/
+RUN --mount=type=bind,from=busybox,source=/sysroot,target=/tmp/busybox \
+    rsync -aHAX --keep-dirlinks /tmp/busybox/. /merge
+RUN --mount=type=bind,from=libffi,source=/libffi,target=/tmp/libffi \
+    rsync -aHAX --keep-dirlinks /tmp/libffi/. /merge/
+RUN --mount=type=bind,from=lz4,source=/lz4,target=/tmp/lz4 \
+    rsync -aHAX --keep-dirlinks /tmp/lz4/. /merge/
+RUN --mount=type=bind,from=xxhash,source=/xxhash,target=/tmp/xxhash \
+    rsync -aHAX --keep-dirlinks /tmp/xxhash/. /merge/
+RUN --mount=type=bind,from=libxml,source=/libxml,target=/tmp/libxml \
+    rsync -aHAX --keep-dirlinks /tmp/libxml/. /merge/
+RUN --mount=type=bind,from=grep,source=/grep,target=/tmp/grep \
+    rsync -aHAX --keep-dirlinks /tmp/grep/. /merge/
+RUN --mount=type=bind,from=diffutils,source=/diffutils,target=/tmp/diffutils \
+    rsync -aHAX --keep-dirlinks /tmp/diffutils/. /merge/
 ## Kernel but only the headers
-COPY --from=kernel-headers /linux-headers/ /linux-headers
-RUN rsync -aHAX --keep-dirlinks  /linux-headers/. /merge/usr/
-COPY --from=findutils /findutils/ /merge/
-COPY --from=gzip /gzip/ /merge/
-COPY --from=shadow-systemd /shadow/ /merge/
-COPY --from=libtool /libtool/ /merge/
-COPY --from=patch /patch/ /merge/
+RUN --mount=type=bind,from=kernel-headers,source=/linux-headers,target=/tmp/linux-headers \
+    rsync -aHAX --keep-dirlinks /tmp/linux-headers/. /merge/usr/
+RUN --mount=type=bind,from=findutils,source=/findutils,target=/tmp/findutils \
+    rsync -aHAX --keep-dirlinks /tmp/findutils/. /merge/
+RUN --mount=type=bind,from=gzip,source=/gzip,target=/tmp/gzip \
+    rsync -aHAX --keep-dirlinks /tmp/gzip/. /merge/
+RUN --mount=type=bind,from=shadow-systemd,source=/shadow,target=/tmp/shadow \
+    rsync -aHAX --keep-dirlinks /tmp/shadow/. /merge/
+RUN --mount=type=bind,from=libtool,source=/libtool,target=/tmp/libtool \
+    rsync -aHAX --keep-dirlinks /tmp/libtool/. /merge/
+RUN --mount=type=bind,from=patch,source=/patch,target=/tmp/patch \
+    rsync -aHAX --keep-dirlinks /tmp/patch/. /merge/
 
-COPY --from=kernel-misc /output /merge/usr/share/kernel-misc
-COPY --from=bc /bc /merge
-COPY --from=libelf /libelf /merge
-COPY --from=tpm2-tss /tpm2-tss /merge
-COPY --from=hadron-splash /hadron-splash/hadron-splash /merge/bin/hadron-splash
+# kernel-misc: kernel modules genuinely change with kernel version, so the
+# mount trick here does not help across kernel bumps. Included for consistency.
+RUN --mount=type=bind,from=kernel-misc,source=/output,target=/tmp/kernel-misc \
+    mkdir -p /merge/usr/share/kernel-misc && rsync -aHAX --keep-dirlinks /tmp/kernel-misc/. /merge/usr/share/kernel-misc
+RUN --mount=type=bind,from=bc,source=/bc,target=/tmp/bc \
+    rsync -aHAX --keep-dirlinks /tmp/bc/. /merge
+RUN --mount=type=bind,from=libelf,source=/libelf,target=/tmp/libelf \
+    rsync -aHAX --keep-dirlinks /tmp/libelf/. /merge
+RUN --mount=type=bind,from=tpm2-tss,source=/tpm2-tss,target=/tmp/tpm2-tss \
+    rsync -aHAX --keep-dirlinks /tmp/tpm2-tss/. /merge
+RUN --mount=type=bind,from=hadron-splash,source=/hadron-splash/hadron-splash,target=/tmp/hadron-splash \
+    install -Dm755 /tmp/hadron-splash /merge/bin/hadron-splash
 
 FROM scratch AS toolchain
 ARG VERSION
