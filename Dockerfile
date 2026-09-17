@@ -760,24 +760,24 @@ FROM stage0 AS stage1-merge
 COPY --from=skeleton /sysroot /skeleton
 
 ## GCC
-COPY --from=gcc-stage0 /sysroot /gcc
-RUN rsync -aHAX --keep-dirlinks /gcc/. /skeleton
+RUN --mount=type=bind,from=gcc-stage0,source=/sysroot,target=/tmp/gcc \
+    rsync -aHAX --keep-dirlinks /tmp/gcc/. /skeleton
 
 ## MUSL
-COPY --from=musl-stage0 /sysroot /musl
-RUN rsync -aHAX --keep-dirlinks /musl/. /skeleton/
+RUN --mount=type=bind,from=musl-stage0,source=/sysroot,target=/tmp/musl \
+    rsync -aHAX --keep-dirlinks /tmp/musl/. /skeleton/
 
 ## BUSYBOX
-COPY --from=busybox-stage0 /sysroot /busybox
-RUN rsync -aHAX --keep-dirlinks /busybox/. /skeleton/
+RUN --mount=type=bind,from=busybox-stage0,source=/sysroot,target=/tmp/busybox \
+    rsync -aHAX --keep-dirlinks /tmp/busybox/. /skeleton/
 
 ## Make
-COPY --from=make-stage0 /sysroot /make
-RUN rsync -aHAX --keep-dirlinks /make/. /skeleton/
+RUN --mount=type=bind,from=make-stage0,source=/sysroot,target=/tmp/make \
+    rsync -aHAX --keep-dirlinks /tmp/make/. /skeleton/
 
 ## Binutils
-COPY --from=binutils-stage0 /sysroot /binutils
-RUN rsync -aHAX --keep-dirlinks /binutils/. /skeleton/
+RUN --mount=type=bind,from=binutils-stage0,source=/sysroot,target=/tmp/binutils \
+    rsync -aHAX --keep-dirlinks /tmp/binutils/. /skeleton/
 
 # Provide ldconfig in the image
 COPY --from=sources-downloader /sources/downloads/aports.tar.gz /aports/aports.tar.gz
