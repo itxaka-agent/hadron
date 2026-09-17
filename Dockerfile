@@ -1047,8 +1047,9 @@ RUN for d in /binutils/usr/bin /usr/bin; do \
       done; \
     done
 
-## m4 (from stage1, ready to be used in the final image)
-FROM stage1 AS m4
+## m4 (from stage1-core, ready to be used in the final image)
+# POC: does not #include <linux/*>. See kairos-io/kairos#4711.
+FROM stage1-core AS m4
 ARG JOBS
 ARG MAX_LOAD
 COPY --from=sources-downloader /sources/downloads/m4.tar.xz /sources/
@@ -1067,7 +1068,8 @@ RUN cd /sources && \
     cd readline && mkdir -p /readline && ./configure ${COMMON_CONFIGURE_ARGS} --disable-dependency-tracking && make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} DESTDIR=/readline && \
     make -s -j${JOBS} DESTDIR=/readline install && make -s -j${JOBS} install
 ## flex
-FROM stage1 AS flex
+# POC: flex does not #include <linux/*>. See kairos-io/kairos#4711.
+FROM stage1-core AS flex
 ARG JOBS
 ARG MAX_LOAD
 COPY --from=sources-downloader /sources/downloads/flex.tar.gz /sources/
@@ -1296,7 +1298,8 @@ RUN cd /sources && \
     make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} DESTDIR=/coreutils install
 
 ## findutils
-FROM stage1 AS findutils
+# POC: findutils does not #include <linux/*>. See kairos-io/kairos#4711.
+FROM stage1-core AS findutils
 ARG JOBS
 ARG MAX_LOAD
 COPY --from=sources-downloader /sources/downloads/findutils.tar.xz /sources/
@@ -1306,7 +1309,8 @@ RUN cd /sources && \
     make -s -j${JOBS} DESTDIR=/findutils install && make -s -j${JOBS} install
 
 ## grep
-FROM stage1 AS grep
+# POC: grep does not #include <linux/*>. See kairos-io/kairos#4711.
+FROM stage1-core AS grep
 ARG JOBS
 ARG MAX_LOAD
 COPY --from=sources-downloader /sources/downloads/grep.tar.xz /sources/
@@ -1480,7 +1484,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} DESTDIR=/util-linux install
 
 
 ## gperf
-FROM stage1 AS gperf
+# POC: gperf does not #include <linux/*>. See kairos-io/kairos#4711.
+FROM stage1-core AS gperf
 ARG JOBS
 ARG MAX_LOAD
 COPY --from=sources-downloader /sources/downloads/gperf.tar.gz /sources/
