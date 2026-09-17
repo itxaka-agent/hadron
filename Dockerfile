@@ -923,6 +923,8 @@ RUN mkdir -p /sources && cd /sources && tar -xf lz4.tar.gz && mv lz4-* lz4 && \
 FROM lz4 AS attr
 ARG JOBS
 ARG MAX_LOAD
+# libmisc/xattrat.c uses <linux/xattr.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=sources-downloader /sources/downloads/attr.tar.gz /sources/
 
 RUN mkdir -p /attr
@@ -942,6 +944,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} install
 FROM attr AS acl
 ARG JOBS
 ARG MAX_LOAD
+# libmisc/xattrat.c uses <linux/xattr.h> and include/openat2.h uses <linux/openat2.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=sources-downloader /sources/downloads/acl.tar.gz /sources/
 
 RUN mkdir -p /sources && cd /sources && tar -xf acl.tar.gz && mv acl-* acl && \
