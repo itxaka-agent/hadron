@@ -1175,6 +1175,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} DESTDIR=/bash install && make -
 FROM bash AS libcap
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/capability.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=sources-downloader /sources/downloads/libcap.tar.xz /sources/
 
 RUN mkdir -p /sources && cd /sources && tar -xf libcap.tar.xz && mv libcap-* libcap && \
@@ -1445,6 +1447,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} install 2>&1
 
 ## util-linux
 FROM bash AS util-linux
+# uses <linux/fs.h>, <linux/blkzoned.h>, <linux/loop.h>, <linux/watchdog.h>, etc.
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 WORKDIR /sources
 COPY --from=sources-downloader /sources/downloads/util-linux.tar.xz /sources/
 RUN tar -xf util-linux.tar.xz && mv util-linux-* util-linux
@@ -1494,6 +1498,8 @@ RUN mkdir -p /hadron-splash && mv hadron-splash /hadron-splash
 FROM rsync AS libseccomp
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/seccomp.h>, <linux/audit.h>, <linux/filter.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=gperf /gperf/ /
 COPY --from=sources-downloader /sources/downloads/libseccomp.tar.gz /sources/
 RUN mkdir -p /libseccomp
@@ -1704,6 +1710,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make install DESTDIR=/gzip
 FROM python-build AS kmod
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/module.h> via libkmod internals
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 ## we need liblzma from xz to build
 COPY --from=xz /xz/ /
 
@@ -1931,6 +1939,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} install
 FROM rsync AS libkcapi
 ARG JOBS
 ARG MAX_LOAD
+# userspace wrapper around the kernel crypto API; needs <linux/if_alg.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=autoconf /autoconf/ /
 COPY --from=automake /automake/ /
 COPY --from=libtool /libtool/ /
@@ -1978,6 +1988,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS libbpf
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/bpf.h>, <linux/btf.h>, <linux/perf_event.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=elfutils /elfutils/ /
 COPY --from=zlib /zlib/ /
 COPY --from=pkgconfig /pkgconfig/ /
@@ -2026,6 +2038,10 @@ RUN rm -rf /pahole/usr/include
 FROM rsync AS kernel-base
 ARG JOBS
 ARG MAX_LOAD
+# kernel build itself uses its own internal headers, but scripts/mod host
+# tools and downstream host-side tooling still need the exported ones.
+# All other kernel-* stages inherit FROM kernel-base or kernel-build.
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=bash /bash /bash
 RUN rsync -aHAX --keep-dirlinks  /bash/. /
 
@@ -2221,6 +2237,8 @@ RUN cp /sources/kernel/Module.symvers /output/Module.symvers
 FROM rsync AS kbd
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/kd.h>, <linux/keyboard.h>, <linux/vt.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 
 # Use coreutils for install as it needs ln to support relative symlinks
@@ -2243,6 +2261,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS strace
 ARG JOBS
 ARG MAX_LOAD
+# tracer needs the full set of <linux/*> syscall / ioctl definitions
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=gawk /gawk/ /
 COPY --from=sources-downloader /sources/downloads/strace.tar.xz /sources/
 RUN mkdir -p /strace
@@ -2328,6 +2348,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS libmnl
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netlink.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=sources-downloader /sources/downloads/libmnl.tar.bz2 /sources/
 RUN mkdir -p /libmnl
 WORKDIR /sources
@@ -2340,6 +2362,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS libnftnl
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netfilter/nf_tables.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=libmnl /libmnl/ /
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=sources-downloader /sources/downloads/libnftnl.tar.xz /sources/
@@ -2354,6 +2378,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS iptables
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netfilter*.h> extensively
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=libmnl /libmnl/ /
 COPY --from=libnftnl /libnftnl/ /
 COPY --from=libcap /libcap /libcap
@@ -2375,6 +2401,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS libnfnetlink
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netfilter/nfnetlink.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=sources-downloader /sources/downloads/libnfnetlink.tar.bz2 /sources/
 RUN mkdir -p /libnfnetlink
@@ -2388,6 +2416,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS libnetfilter_conntrack
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netfilter/nf_conntrack_*.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=libmnl /libmnl/ /
 COPY --from=libnfnetlink /libnfnetlink/ /
 COPY --from=pkgconfig /pkgconfig/ /
@@ -2403,6 +2433,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS libnetfilter_cttimeout
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netfilter/nfnetlink_cttimeout.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=libmnl /libmnl/ /
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=sources-downloader /sources/downloads/libnetfilter_cttimeout.tar.bz2 /sources/
@@ -2417,6 +2449,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS libnetfilter_cthelper
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netfilter/nfnetlink_cthelper.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=libmnl /libmnl/ /
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=sources-downloader /sources/downloads/libnetfilter_cthelper.tar.bz2 /sources/
@@ -2431,6 +2465,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS libnetfilter_queue
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netfilter/nfnetlink_queue.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=libmnl /libmnl/ /
 COPY --from=libnfnetlink /libnfnetlink/ /
 COPY --from=pkgconfig /pkgconfig/ /
@@ -2465,6 +2501,8 @@ RUN DESTDIR=/libaio make -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} install
 FROM rsync AS lvm2
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/dm-ioctl.h>, <linux/fs.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=libaio /libaio/ /
 COPY --from=readline /readline/ /
@@ -2546,6 +2584,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS e2fsprogs
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/fs.h>, <linux/fiemap.h>, <linux/major.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=util-linux /util-linux /util-linux
 RUN rsync -aHAX --keep-dirlinks  /util-linux/. /
@@ -2562,6 +2602,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS dosfstools
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/fs.h>, <linux/hdreg.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=sources-downloader /sources/downloads/dosfstools.tar.gz /sources/
 RUN mkdir -p /dosfstools
 WORKDIR /sources
@@ -2631,6 +2673,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} install DESTDIR=/libtirpc
 FROM rsync AS conntrack-tools
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/netfilter/nfnetlink*.h> and <linux/netfilter/nf_conntrack_*.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=libmnl /libmnl/ /
 COPY --from=libnfnetlink /libnfnetlink/ /
 COPY --from=libnetfilter_conntrack /libnetfilter_conntrack/ /
@@ -2660,6 +2704,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS procps-ng
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/*> for /proc parsing helpers (sysinfo, taskstats)
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=sources-downloader /sources/downloads/procps-ng.tar.xz /sources/
 WORKDIR /sources
@@ -2729,6 +2775,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} \
 FROM rsync AS keyutils
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/keyctl.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=sources-downloader /sources/downloads/keyutils.tar.gz /sources/
 RUN mkdir -p /keyutils
 WORKDIR /sources
@@ -2759,6 +2807,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS nfs-utils
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/nfs.h>, <linux/nfs4.h>, <linux/nfs_idmap.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=libtirpc /libtirpc/ /
 COPY --from=libnl /libnl/ /
@@ -2867,6 +2917,8 @@ RUN rm -f \
 FROM rsync AS audit
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/audit.h>, <linux/netlink.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=autoconf /autoconf/ /
 COPY --from=automake /automake/ /
 COPY --from=libtool /libtool/ /
@@ -2916,6 +2968,8 @@ RUN rm -rf /audit/usr/share/audit-rules \
 FROM rsync AS cryptsetup
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/dm-ioctl.h>, <linux/loop.h>, <linux/fs.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=lvm2 /lvm2/ /
 COPY --from=openssl /openssl/ /
@@ -2947,6 +3001,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS parted
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/blkpg.h>, <linux/hdreg.h>, <linux/fs.h>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 ## device-mapper from lvm2
 COPY --from=lvm2 /lvm2/ /
 
@@ -3128,6 +3184,8 @@ RUN if [ ${ARCH} = "aarch64" ] ; then \
 FROM rsync AS tpm2-tss
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/tpm.h> for the /dev/tpm* kernel API
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 RUN mkdir -p /tpm2-tss
 
 COPY --from=pkgconfig /pkgconfig/ /
@@ -3170,6 +3228,9 @@ RUN make -s ARCH=${BUILD_ARCH} install DESTDIR=/libucontext
 FROM rsync AS systemd
 ARG SBAT_DISTRO_VERSION
 
+# systemd is one of the heaviest <linux/*> consumers in the tree
+# (fanotify, keyctl, netlink, dm-ioctl, loop, bpf, seccomp, watchdog, ...)
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=gperf /gperf/ /
 
 COPY --from=util-linux /util-linux /util-linux
@@ -3324,6 +3385,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS lvm2-systemd
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/dm-ioctl.h>, <linux/fs.h> (same as plain lvm2)
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 COPY --from=libaio /libaio/ /
 COPY --from=readline /readline/ /
@@ -3357,6 +3420,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM rsync AS multipath-tools
 ARG JOBS
 ARG MAX_LOAD
+# uses <linux/dm-ioctl.h>, <scsi/*> (which pull in <linux/*>)
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 COPY --from=pkgconfig /pkgconfig/ /
 # devmapper
 COPY --from=lvm2-systemd /lvm2/ /
@@ -3496,6 +3561,8 @@ RUN make -s -j${JOBS} ${MAX_LOAD:+-l${MAX_LOAD}} && make -s -j${JOBS} ${MAX_LOAD
 FROM python-build AS openscsi
 ARG JOBS
 ARG MAX_LOAD
+# open-iscsi uses <linux/netlink.h>, <linux/genetlink.h>, <scsi/*>
+COPY --from=kernel-headers-stage0 /linux-headers/. /usr/include/
 # Wee need cmake, libkmod, liblzma, mount, systemd, perl
 COPY --from=cmake /cmake/ /
 COPY --from=kmod /kmod/ /
