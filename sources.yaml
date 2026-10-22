@@ -140,6 +140,7 @@ packages:
     sha256: 1048bc7f50fa42a6621bc2f8816173f89a0c0098f26dff072bc8fe40af714400
     urls:
       - https://gitlab.alpinelinux.org/alpine/ca-certificates/-/archive/${version}/ca-certificates-${version}.tar.bz2
+      - https://distfiles.alpinelinux.org/distfiles/edge/ca-certificates-${version}.tar.bz2
     filename: ca-certificates.tar.bz2
 
   cmake:
