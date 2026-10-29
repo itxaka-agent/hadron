@@ -349,12 +349,13 @@ FROM ${SOURCES_REPO}/libxml2:${LIBXML2_VERSION} AS libxml2-download
 FROM ${SOURCES_REPO}/gzip:${GZIP_VERSION} AS gzip-download
 FROM ${SOURCES_REPO}/bash:${BASH_VERSION} AS bash-tarball-download
 FROM sources-downloader-base AS bash-download
-ARG BASH_VERSION
 # Patch level is the number of patches upstream bash has released for this version https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}-patches/
 # It is bumped separately from BASH_VERSION by updatecli.d/core-system.yaml
 ARG PATCH_LEVEL=20
 COPY --from=bash-tarball-download /sources/downloads/bash.tar.gz /sources/downloads/
-RUN tar -xf bash.tar.gz && rm bash.tar.gz && mv bash-${BASH_VERSION} bash
+# The version is read from the top directory of the tarball instead of a stage
+# ARG, so BASH_VERSION keeps a single default for updatecli and for hand bumps.
+RUN tar -xf bash.tar.gz && rm bash.tar.gz && src=$(echo bash-*) && echo "${src#bash-}" > /sources/bash-version && mv "${src}" bash
 # Get the patches from https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}-patches/
 # They are in the format bash$BASH_VERSION_NO_DOT-NNN where NNN is a 3-digit zero-padded index
 # starting at 001.
@@ -362,16 +363,17 @@ RUN tar -xf bash.tar.gz && rm bash.tar.gz && mv bash-${BASH_VERSION} bash
 # hack/refresh-source-checksums.sh rewrites that file when BASH_VERSION or PATCH_LEVEL moves.
 COPY files/bash/patches.sha256 /sources/bash-patches.sha256
 WORKDIR /sources/downloads/bash
-RUN for i in $(seq 1 ${PATCH_LEVEL}); do \
+RUN bash_version=$(cat /sources/bash-version); \
+    for i in $(seq 1 ${PATCH_LEVEL}); do \
         patch_num=$(printf '%03d' ${i}); \
-        patch_name=bash${BASH_VERSION//./}-${patch_num}; \
+        patch_name=bash${bash_version//./}-${patch_num}; \
         expected=$(awk -v f="${patch_name}" '$2 == f { print $1 }' /sources/bash-patches.sha256); \
         test -n "${expected}" || { echo "No sha256 pinned for ${patch_name} in files/bash/patches.sha256, run hack/refresh-source-checksums.sh bash"; exit 1; }; \
         echo "Applying bash patch ${patch_name}"; \
         matched=0; \
         for mirror in ${GNU_MIRROR_1} ${GNU_MIRROR_2} ${GNU_MIRROR_3}; do \
             rm -f bash-patch-${patch_num}.patch; \
-            wget -q -T 30 -t 1 "${mirror}/bash/bash-${BASH_VERSION}-patches/${patch_name}" -O bash-patch-${patch_num}.patch || continue; \
+            wget -q -T 30 -t 1 "${mirror}/bash/bash-${bash_version}-patches/${patch_name}" -O bash-patch-${patch_num}.patch || continue; \
             printf '%s  %s\n' "${expected}" bash-patch-${patch_num}.patch > /tmp/bash-patch.sha256; \
             if sha256sum -c /tmp/bash-patch.sha256; then matched=1; break; fi; \
         done; \
