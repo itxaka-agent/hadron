@@ -47,6 +47,7 @@ ARG ATTR_VERSION=2.6.0
 ARG AUDIT_VERSION=4.2.1
 ARG AUTOCONF_VERSION=2.73
 ARG AUTOMAKE_VERSION=1.18.1
+ARG BASH_VERSION=5.3
 ARG BC_VERSION=7.1.0
 ARG BINUTILS_VERSION=2.47
 ARG BISON_VERSION=3.8.2
@@ -346,20 +347,17 @@ FROM ${SOURCES_REPO}/tpm2-tss:${TPM2_TSS_VERSION} AS tpm2-tss-download
 FROM ${SOURCES_REPO}/libucontext:${LIBUCONTEXT_VERSION} AS libucontext-download
 FROM ${SOURCES_REPO}/libxml2:${LIBXML2_VERSION} AS libxml2-download
 FROM ${SOURCES_REPO}/gzip:${GZIP_VERSION} AS gzip-download
+FROM ${SOURCES_REPO}/bash:${BASH_VERSION} AS bash-tarball-download
 FROM sources-downloader-base AS bash-download
-ARG BASH_VERSION=5.3
+ARG BASH_VERSION
 # Patch level is the number of patches upstream bash has released for this version https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}-patches/
 # It is bumped separately from BASH_VERSION by updatecli.d/core-system.yaml
 ARG PATCH_LEVEL=20
+COPY --from=bash-tarball-download /sources/downloads/bash.tar.gz /sources/downloads/
+RUN tar -xf bash.tar.gz && rm bash.tar.gz && mv bash-${BASH_VERSION} bash
 # Get the patches from https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}-patches/
 # They are in the format bash$BASH_VERSION_NO_DOT-NNN where NNN is a 3-digit zero-padded index
 # starting at 001.
-RUN for mirror in ${GNU_MIRROR_1} ${GNU_MIRROR_2} ${GNU_MIRROR_3}; do \
-        wget -q -T 30 -t 1 "${mirror}/bash/bash-${BASH_VERSION}.tar.gz" -O bash-${BASH_VERSION}.tar.gz && break; \
-        rm -f bash-${BASH_VERSION}.tar.gz; \
-    done; \
-    test -s bash-${BASH_VERSION}.tar.gz; \
-    tar -xf bash-${BASH_VERSION}.tar.gz && mv bash-${BASH_VERSION} bash
 WORKDIR /sources/downloads/bash
 RUN for i in $(seq 1 ${PATCH_LEVEL}); do \
         patch_num=$(printf '%03d' ${i}); \
