@@ -358,15 +358,24 @@ RUN tar -xf bash.tar.gz && rm bash.tar.gz && mv bash-${BASH_VERSION} bash
 # Get the patches from https://ftp.gnu.org/gnu/bash/bash-${BASH_VERSION}-patches/
 # They are in the format bash$BASH_VERSION_NO_DOT-NNN where NNN is a 3-digit zero-padded index
 # starting at 001.
+# Each patch has to match its sha256 in files/bash/patches.sha256 before it is applied.
+# hack/refresh-source-checksums.sh rewrites that file when BASH_VERSION or PATCH_LEVEL moves.
+COPY files/bash/patches.sha256 /sources/bash-patches.sha256
 WORKDIR /sources/downloads/bash
 RUN for i in $(seq 1 ${PATCH_LEVEL}); do \
         patch_num=$(printf '%03d' ${i}); \
-        echo "Applying bash patch bash${BASH_VERSION//./}-${patch_num}"; \
+        patch_name=bash${BASH_VERSION//./}-${patch_num}; \
+        expected=$(awk -v f="${patch_name}" '$2 == f { print $1 }' /sources/bash-patches.sha256); \
+        test -n "${expected}" || { echo "No sha256 pinned for ${patch_name} in files/bash/patches.sha256, run hack/refresh-source-checksums.sh bash"; exit 1; }; \
+        echo "Applying bash patch ${patch_name}"; \
+        matched=0; \
         for mirror in ${GNU_MIRROR_1} ${GNU_MIRROR_2} ${GNU_MIRROR_3}; do \
-            wget -q -T 30 -t 1 "${mirror}/bash/bash-${BASH_VERSION}-patches/bash${BASH_VERSION//./}-${patch_num}" -O bash-patch-${patch_num}.patch && break; \
             rm -f bash-patch-${patch_num}.patch; \
+            wget -q -T 30 -t 1 "${mirror}/bash/bash-${BASH_VERSION}-patches/${patch_name}" -O bash-patch-${patch_num}.patch || continue; \
+            printf '%s  %s\n' "${expected}" bash-patch-${patch_num}.patch > /tmp/bash-patch.sha256; \
+            if sha256sum -c /tmp/bash-patch.sha256; then matched=1; break; fi; \
         done; \
-        test -s bash-patch-${patch_num}.patch || { echo "Failed to download bash patch ${patch_num} from all mirrors"; exit 1; }; \
+        test "${matched}" -eq 1 || { echo "No mirror served bash patch ${patch_name} with the pinned sha256"; exit 1; }; \
         patch -p0 < bash-patch-${patch_num}.patch; \
     done
 WORKDIR /sources/downloads
